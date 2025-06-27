@@ -408,7 +408,7 @@
                 let chatHistory = [];
                 chatHistory.push({ role: "user", parts: [{ text: prompt }] });
                 const payload = { contents: chatHistory };
-                const geminiApiKey = ""; 
+                const geminiApiKey = "AIzaSyDzNh64cshPxNTiGeWTZJzFfnaWn3nk5ZY"; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
 
                 const response = await fetch(apiUrl, {
