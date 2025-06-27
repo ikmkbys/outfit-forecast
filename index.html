@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お天気服装予報アプリ</title>
+    <!-- Tailwind CSSを読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) を読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 日本語フォントとInterを適用 */
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+        /* ちょっとしたアニメーション */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* 選択されたボタンのスタイル */
+        .target-btn.active {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: white;
+            border-color: #3b82f6;
+        }
+        /* 選択されていないボタンのスタイル */
+        .target-btn.inactive {
+            background-color: white;
+            color: #3b82f6;
+            border-color: #3b82f6;
+        }
+         .dark .target-btn.inactive {
+            background-color: #374151; /* dark:bg-gray-700 */
+            color: #d1d5db; /* dark:text-gray-300 */
+            border-color: #4b5563; /* dark:border-gray-600 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-sm bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 text-gray-800 dark:text-gray-200">
+        <h1 class="text-2xl font-bold text-center mb-4 text-gray-900 dark:text-white">お天気服装予報</h1>
+
+        <!-- 天気情報を表示するメインのコンテナ -->
+        <div id="weather-container" class="space-y-6">
+            <!-- 初期メッセージまたはローディング表示 -->
+            <div id="initial-message" class="text-center">
+                <button id="get-weather-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                    現在地の天気を取得
+                </button>
+                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">ブラウザの位置情報利用を許可してください。</p>
+            </div>
+
+            <!-- 天気情報が表示される部分 (最初は非表示) -->
+            <div id="weather-info" class="hidden space-y-4 fade-in">
+                <!-- 場所 -->
+                <div id="location" class="text-center text-xl font-semibold text-gray-700 dark:text-gray-300"></div>
+                
+                <!-- 天気アイコンと気温 -->
+                <div class="flex items-center justify-center space-x-4">
+                    <img id="weather-icon" src="https://placehold.co/100x100/e2e8f0/e2e8f0?text=..." alt="天気アイコン" class="w-24 h-24">
+                    <div>
+                        <p id="temperature" class="text-5xl font-bold text-gray-900 dark:text-white"></p>
+                        <p id="weather-description" class="text-center text-gray-600 dark:text-gray-400"></p>
+                    </div>
+                </div>
+
+                <!-- 湿度 -->
+                <div class="text-center">
+                    <p class="text-lg"><span class="font-semibold">湿度:</span> <span id="humidity"></span></p>
+                </div>
+
+                <!-- 服装の提案 -->
+                <div class="bg-blue-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h2 class="font-bold text-lg mb-3 text-blue-800 dark:text-blue-300">今日の服装アドバイス</h2>
+                    <!-- 対象者選択ボタン -->
+                    <div id="target-selector" class="flex justify-center space-x-2 mb-4">
+                        <button data-target="men" class="target-btn active px-3 py-1 rounded-md text-sm transition-colors duration-200 border">男性</button>
+                        <button data-target="women" class="target-btn inactive px-3 py-1 rounded-md text-sm transition-colors duration-200 border">女性</button>
+                        <button data-target="children" class="target-btn inactive px-3 py-1 rounded-md text-sm transition-colors duration-200 border">子供</button>
+                    </div>
+                    <p id="outfit-recommendation" class="text-blue-700 dark:text-blue-200 min-h-[60px]"></p>
+                    
+                    <!-- AI相談機能 -->
+                    <div class="mt-4 pt-4 border-t border-blue-200 dark:border-gray-600">
+                        <label for="custom-query" class="text-sm font-semibold text-gray-700 dark:text-gray-300">この服どうかな？ (AI相談)</label>
+                        <div class="flex space-x-2 mt-1">
+                            <input type="text" id="custom-query" placeholder="例：革ジャン" class="w-full px-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400">
+                            <button id="ask-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 rounded-md text-sm flex-shrink-0 disabled:bg-blue-300">聞く</button>
+                        </div>
+                        <div id="custom-answer" class="mt-3 text-sm text-blue-700 dark:text-blue-200 min-h-[40px] p-2 bg-blue-100 dark:bg-gray-600 rounded-md"></div>
+                    </div>
+                </div>
+                
+                <!-- ▼▼▼ 外部リンク ▼▼▼ -->
+                <div class="text-center">
+                    <a href="https://tenki.jp/" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:underline dark:text-blue-400">
+                        詳しい天気はこちら (tenki.jp) &rarr;
+                    </a>
+                </div>
+                <!-- ▲▲▲ ここまで ▲▲▲ -->
+
+                <!-- 手動入力機能 -->
+                 <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold text-center text-gray-700 dark:text-gray-300 mb-2">または、手動で設定</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="manual-temp" placeholder="気温 (°C)" class="w-full px-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400">
+                        <input type="number" id="manual-humidity" placeholder="湿度 (%)" class="w-full px-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400">
+                    </div>
+                    <input type="text" id="manual-weather" placeholder="天気 (例: 晴れ, 雨, 曇り)" class="w-full mt-2 px-3 py-2 text-sm rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400">
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                         <button id="back-to-current-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-2 rounded-lg transition-colors duration-300 text-sm">
+                            現在地に戻る
+                        </button>
+                        <button id="manual-lookup-btn" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-2 rounded-lg transition-colors duration-300 text-sm">
+                            この条件で調べる
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- エラーメッセージ表示用 -->
+            <div id="error-message" class="hidden text-center text-red-500 bg-red-100 dark:bg-red-900/30 p-3 rounded-lg"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- グローバル変数 ---
+        let apiWeatherData = null; // APIから取得した生の天気データを保持
+        let currentDisplayData = null; // 現在表示中の天気データ（APIまたは手動）
+        let currentTarget = 'men';
+
+        // --- DOM要素の取得 ---
+        const getWeatherBtn = document.getElementById('get-weather-btn');
+        const initialMessage = document.getElementById('initial-message');
+        const weatherInfo = document.getElementById('weather-info');
+        const errorMessage = document.getElementById('error-message');
+        const targetButtons = document.querySelectorAll('.target-btn');
+        const customQueryInput = document.getElementById('custom-query');
+        const askBtn = document.getElementById('ask-btn');
+        const customAnswerDiv = document.getElementById('custom-answer');
+        // 手動入力要素
+        const manualTempInput = document.getElementById('manual-temp');
+        const manualHumidityInput = document.getElementById('manual-humidity');
+        const manualWeatherInput = document.getElementById('manual-weather');
+        const manualLookupBtn = document.getElementById('manual-lookup-btn');
+        const backToCurrentBtn = document.getElementById('back-to-current-btn');
+
+
+        // --- APIキー設定 ---
+        const apiKey = 'd870c0e1efeceef5460ceb5d7a1a7559';
+
+        // --- イベントリスナー ---
+        getWeatherBtn.addEventListener('click', fetchWeatherAndDisplay);
+        targetButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                currentTarget = button.dataset.target;
+                updateTargetButtons();
+                updateOutfitDisplay();
+            });
+        });
+        askBtn.addEventListener('click', getCustomAdvice);
+        customQueryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') getCustomAdvice();
+        });
+        manualLookupBtn.addEventListener('click', lookupManually);
+        backToCurrentBtn.addEventListener('click', () => {
+             if (apiWeatherData) {
+                currentDisplayData = apiWeatherData;
+                updateUI(apiWeatherData.name);
+             } else {
+                fetchWeatherAndDisplay();
+             }
+        });
+
+
+        /**
+         * 対象者選択ボタンのスタイルを更新する
+         */
+        function updateTargetButtons() {
+            targetButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.target === currentTarget);
+                btn.classList.toggle('inactive', btn.dataset.target !== currentTarget);
+            });
+        }
+        
+        /**
+         * 天気情報をAPIから取得して表示するメインの関数
+         */
+        function fetchWeatherAndDisplay() {
+            if (apiKey === 'YOUR_API_KEY_HERE' || apiKey.startsWith('http')) {
+                showError('APIキーが正しく設定されていません。');
+                return;
+            }
+
+            hideError();
+            initialMessage.innerHTML = `<p class="text-gray-500 dark:text-gray-400">位置情報を取得中...</p>`;
+            weatherInfo.classList.add('hidden');
+
+            navigator.geolocation.getCurrentPosition(
+                position => getWeatherData(position.coords.latitude, position.coords.longitude),
+                error => {
+                    showError('位置情報を取得できませんでした。');
+                    getWeatherData(35.6895, 139.6917, "東京都 (デフォルト)");
+                }
+            );
+        }
+
+        /**
+         * OpenWeatherMap APIを呼び出す
+         */
+        async function getWeatherData(lat, lon, fallbackCity = null) {
+            initialMessage.innerHTML = `<p class="text-gray-500 dark:text-gray-400">天気情報を取得中...</p>`;
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=ja`;
+
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || '天気情報を取得できませんでした。');
+                }
+                const data = await response.json();
+                apiWeatherData = data; // APIからのデータを保存
+                currentDisplayData = data; // 表示用データも更新
+                updateUI(fallbackCity);
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                showError(`エラーが発生しました: ${error.message}`);
+            }
+        }
+
+        /**
+         * 手動入力された値で服装を調べる
+         */
+        function lookupManually() {
+            const temp = parseFloat(manualTempInput.value);
+            const humidity = parseInt(manualHumidityInput.value, 10);
+            const weatherDesc = manualWeatherInput.value.trim();
+
+            if (isNaN(temp)) {
+                alert('有効な気温を入力してください。');
+                return;
+            }
+
+            // 手動入力用の天気データオブジェクトを作成
+            const mockData = {
+                name: "手動設定",
+                main: {
+                    temp: temp,
+                    humidity: isNaN(humidity) ? 50 : humidity,
+                },
+                weather: [
+                    {
+                        description: weatherDesc || "（指定なし）",
+                        main: convertDescriptionToMain(weatherDesc)
+                    }
+                ]
+            };
+            currentDisplayData = mockData;
+            updateUI("手動設定");
+            document.getElementById('location').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        /**
+         * 日本語の天気記述をAPIのカテゴリに変換するヘルパー関数
+         */
+        function convertDescriptionToMain(desc) {
+            if (!desc) return 'Clear';
+            if (desc.includes('雨') || desc.includes('雷雨')) return 'Rain';
+            if (desc.includes('雪')) return 'Snow';
+            if (desc.includes('晴')) return 'Clear';
+            if (desc.includes('曇') || desc.includes('くもり')) return 'Clouds';
+            return 'Clear';
+        }
+
+        /**
+         * UI全体を更新する
+         */
+        function updateUI(locationName) {
+            if (!currentDisplayData) return;
+            const data = currentDisplayData;
+
+            document.getElementById('location').textContent = locationName || data.name;
+            document.getElementById('temperature').innerHTML = `${Math.round(data.main.temp)}&deg;C`;
+            document.getElementById('humidity').textContent = `${data.main.humidity}%`;
+            document.getElementById('weather-description').textContent = data.weather[0].description;
+            if (data.weather[0].icon) {
+                 document.getElementById('weather-icon').src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+            } else {
+                 document.getElementById('weather-icon').src = `https://placehold.co/100x100/e2e8f0/9ca3af?text=${data.weather[0].description.charAt(0)}`;
+            }
+            document.getElementById('weather-icon').alt = data.weather[0].description;
+            
+            // 手動入力欄に現在の値をセットする処理
+            if (data.name !== "手動設定") {
+                manualTempInput.value = Math.round(data.main.temp);
+                manualHumidityInput.value = data.main.humidity;
+                manualWeatherInput.value = data.weather[0].description;
+            }
+            
+            updateOutfitDisplay();
+            customAnswerDiv.textContent = '';
+
+            initialMessage.classList.add('hidden');
+            weatherInfo.classList.remove('hidden');
+        }
+
+        /**
+         * 服装提案部分のみを更新する
+         */
+        function updateOutfitDisplay() {
+            if (!currentDisplayData) return;
+            const { temp } = currentDisplayData.main;
+            const { main } = currentDisplayData.weather[0];
+            const outfit = getOutfitRecommendation(temp, main, currentTarget);
+            document.getElementById('outfit-recommendation').textContent = outfit;
+        }
+
+        /**
+         * 服装提案を生成する
+         */
+        function getOutfitRecommendation(temp, weatherMain, target) {
+            let baseRec = '';
+            if (target === 'men') {
+                if (temp >= 28) baseRec = 'Tシャツにショートパンツが涼しくて快適。';
+                else if (temp >= 24) baseRec = '半袖シャツやポロシャツに、チノパンがおすすめ。';
+                else if (temp >= 20) baseRec = '長袖シャツ一枚や、Tシャツにカーディガンを羽織るスタイルが良いでしょう。';
+                else if (temp >= 16) baseRec = 'スウェットやパーカー、薄手のニットが活躍します。軽いジャケットも◎。';
+                else if (temp >= 12) baseRec = 'ジャケットやブルゾンの下にセーターを着込むと安心。';
+                else baseRec = '冬物のコートやダウンジャケットは必須。マフラーや手袋でしっかり防寒を。';
+            } else if (target === 'women') {
+                if (temp >= 28) baseRec = 'ワンピースやノースリーブ、Tシャツにスカートやリネンパンツがおすすめ。';
+                else if (temp >= 24) baseRec = '半袖ブラウスやカットソーが快適です。';
+                else if (temp >= 20) baseRec = '長袖のブラウスや薄手のカーディガンがあると便利です。';
+                else if (temp >= 16) baseRec = 'ニットやスウェット、少し厚手のカーディガンがちょうど良いです。';
+                else if (temp >= 12) baseRec = 'トレンチコートやジャケットが必要です。インナーはニットが良いでしょう。';
+                else baseRec = 'ダウンコートやウールのコートで暖かく。ストールやブーツも活用しましょう。';
+            } else { // children
+                if (temp >= 28) baseRec = '半袖・半ズボンで元気に！汗をかきやすいので、着替えを用意してあげましょう。';
+                else if (temp >= 24) baseRec = '半袖Tシャツで十分ですが、朝晩は薄手の羽織ものがあると安心。';
+                else if (temp >= 20) baseRec = '長袖Tシャツやトレーナーが基本。動きやすい服装を。';
+                else if (temp >= 16) baseRec = 'トレーナーの上に、ウィンドブレーカーなど軽い上着をプラス。';
+                else if (temp >= 12) baseRec = 'フリースやライトダウンなど、暖かくて動きやすいアウターを。';
+                else baseRec = '厚手のダウンジャケットに、帽子や手袋、マフラーでしっかり寒さから守ってあげましょう。';
+            }
+            let weatherAddon = '';
+            switch (weatherMain) {
+                case 'Rain': case 'Drizzle': case 'Thunderstorm':
+                    weatherAddon = '傘やレインコートを忘れずに。'; break;
+                case 'Snow':
+                    weatherAddon = '雪で滑らない靴を選びましょう。'; break;
+                case 'Clear':
+                    weatherAddon = '日差しが強いので帽子や日焼け止めがあると良いです。'; break;
+                case 'Clouds':
+                    weatherAddon = '曇りでも紫外線対策は忘れずに。'; break;
+            }
+            return `${baseRec} ${weatherAddon}`.trim();
+        }
+
+        /**
+         * AIにカスタムアドバイスを問い合わせる
+         */
+        async function getCustomAdvice() {
+            if (!currentDisplayData) {
+                customAnswerDiv.textContent = '先に天気を調べてください。';
+                return;
+            }
+            const userQuery = customQueryInput.value.trim();
+            if (!userQuery) {
+                customAnswerDiv.textContent = '質問を入力してください。';
+                return;
+            }
+
+            customAnswerDiv.textContent = 'AIが考え中です...';
+            askBtn.disabled = true;
+
+            const { temp, humidity } = currentDisplayData.main;
+            const weatherDescription = currentDisplayData.weather[0].description;
+            const locationName = document.getElementById('location').textContent;
+
+            const prompt = `あなたは親切なファッションアドバイザーです。以下の気象情報とユーザーのプロフィールに基づいて、服装に関するユーザーの質問に日本語で簡潔に、親しみやすく答えてください。
+
+# 気象情報
+- 場所: ${locationName}
+- 気温: ${Math.round(temp)}℃
+- 天気: ${weatherDescription}
+- 湿度: ${humidity}%
+
+# ユーザープロフィール
+- 対象: ${currentTarget === 'men' ? '男性' : currentTarget === 'women' ? '女性' : '子供'}
+
+# ユーザーの質問
+「${userQuery}」
+
+# 回答の形式
+- ユーザーの質問に対する直接的な答えを最初に述べる。（例：「良いですね！」「少し暑いかもしれません。」）
+- その後、理由や代替案を簡潔に説明する。
+
+回答:`;
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const geminiApiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('AIからの回答取得に失敗。');
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
+                    customAnswerDiv.textContent = result.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error('AIからの回答が空でした。');
+                }
+
+            } catch (error) {
+                console.error('Error getting custom advice:', error);
+                customAnswerDiv.textContent = 'AIアドバイスの取得中にエラーが発生しました。';
+            } finally {
+                askBtn.disabled = false;
+            }
+        }
+
+        /**
+         * エラーメッセージを表示する
+         */
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            initialMessage.classList.remove('hidden');
+            initialMessage.innerHTML = `<button id="get-weather-btn-retry" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">もう一度試す</button>`;
+            document.getElementById('get-weather-btn-retry').addEventListener('click', fetchWeatherAndDisplay);
+        }
+
+        /**
+         * エラーメッセージを非表示にする
+         */
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
